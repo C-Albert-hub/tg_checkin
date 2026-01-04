@@ -1,0 +1,12 @@
+{
+  "XMRthBot": {
+    "type": "command",
+    "cmd": "/checkin",
+    "desc": "XMR 矿池签到"
+  },
+  "QingBaoJuZhuQuebot": {
+    "type": "command",
+    "cmd": "/sign",
+    "desc": "情报局朱雀签到"
+  }
+}
