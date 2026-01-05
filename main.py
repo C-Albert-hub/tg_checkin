@@ -12,7 +12,6 @@ BOTS_FILE = "bots.json"
 
 
 # ================== 加载配置 ==================
-
 def load_tg_config(path=TG_CONFIG_FILE):
     if not os.path.exists(path):
         raise FileNotFoundError(f"未找到 {path}")
@@ -41,7 +40,6 @@ def load_bots_config(path=BOTS_FILE):
 
 
 # ================== 菜单与输入 ==================
-
 def show_menu():
     print("""
 ================ Telegram Checkin Menu ================
@@ -68,7 +66,6 @@ def get_sign_time():
 
 
 # ================== 功能实现 ==================
-
 async def list_all_bots(client, bots_cfg):
     print("=== Bots in your account ===")
     async for dialog in client.iter_dialogs():
@@ -107,32 +104,40 @@ async def send_checkin(client, bots_cfg):
 
 async def scheduled_checkin(client, bots_cfg, hour, minute):
     print(f"[+] 定时签到已启动：{hour:02d}:{minute:02d}")
-
     try:
         while True:
             now = datetime.now()
             if now.hour == hour and now.minute == minute:
                 await send_checkin(client, bots_cfg)
-                await asyncio.sleep(61)
+                print(f"[INFO] 定时签到完成，等待下一次触发...")
+                await asyncio.sleep(61)  # 防止重复触发
             await asyncio.sleep(20)
     except asyncio.CancelledError:
         pass
 
 
 # ================== 短任务统一出口 ==================
-
 async def handle_short_task(func, name):
     await func()
     print(f"[DONE] {name}")
     while True:
-        choice = input("输入 b 返回菜单，输入 q 退出: ").strip().lower()
+        choice = input("\n 输入 b 返回菜单，输入 q 退出: ").strip().lower()
         if choice in ("b", "q"):
             return choice
-        print("请输入 b 或 q")
+        print("\n 请输入 b 或 q")
+
+
+# ================== 心跳保持 ==================
+async def keep_alive(client):
+    while True:
+        try:
+            await client.get_me()
+        except Exception as e:
+            print(f"[WARN] keepalive failed: {e}")
+        await asyncio.sleep(300)
 
 
 # ================== 主入口 ==================
-
 async def main():
     try:
         tg_cfg = load_tg_config()
@@ -144,8 +149,13 @@ async def main():
     async with TelegramClient(
         tg_cfg["session_name"],
         tg_cfg["api_id"],
-        tg_cfg["api_hash"]
+        tg_cfg["api_hash"],
+        connection_retries=999999,  # 实际无限重连
+        auto_reconnect=True
     ) as client:
+
+        # 启动心跳保持
+        asyncio.create_task(keep_alive(client))
 
         while True:
             show_menu()
@@ -169,12 +179,14 @@ async def main():
 
             elif choice == "3":
                 hour, minute = get_sign_time()
+                # 定时签到常驻，不返回菜单
                 await scheduled_checkin(client, bots_cfg, hour, minute)
                 break
 
             elif choice == "4":
                 await send_checkin(client, bots_cfg)
                 hour, minute = get_sign_time()
+                # 立即签到+定时签到常驻
                 await scheduled_checkin(client, bots_cfg, hour, minute)
                 break
 
