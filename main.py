@@ -109,7 +109,7 @@ async def scheduled_checkin(client, bots_cfg, hour, minute):
             now = datetime.now()
             if now.hour == hour and now.minute == minute:
                 await send_checkin(client, bots_cfg)
-                print(f"[INFO] 定时签到完成，等待下一次触发...")
+                print(f"[+] 定时签到完成，等待下一次触发...")
                 await asyncio.sleep(61)  # 防止重复触发
             await asyncio.sleep(20)
     except asyncio.CancelledError:
