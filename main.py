@@ -80,19 +80,25 @@ async def list_all_bots(client, bots_cfg):
 
 async def send_checkin(client, bots_cfg):
     start_time = datetime.now()
-    success = 0
-    failed = 0
+    tasks = []
 
-    for bot, info in bots_cfg.items():
-        await asyncio.sleep(random.randint(5, 15))
+    async def _checkin_one(bot, info):
+        await asyncio.sleep(random.randint(5, 15))  # 随机打散，但在同一时间窗口
         try:
             if info["type"] == "command":
                 await client.send_message(bot, info["cmd"])
-                success += 1
                 print(f"[{datetime.now()}] Sent {info['cmd']} -> {bot}")
+                return True
         except Exception as e:
-            failed += 1
             print(f"[{datetime.now()}] Failed {bot}: {e}")
+        return False
+
+    for bot, info in bots_cfg.items():
+        tasks.append(asyncio.create_task(_checkin_one(bot, info)))
+
+    results = await asyncio.gather(*tasks)
+    success = sum(1 for r in results if r)
+    failed = len(results) - success
 
     end_time = datetime.now()
     print(
@@ -100,6 +106,7 @@ async def send_checkin(client, bots_cfg):
         f"成功 {success} / 失败 {failed} | "
         f"耗时 {(end_time - start_time).seconds}s\n"
     )
+
 
 
 async def scheduled_checkin(client, bots_cfg, hour, minute):
@@ -114,6 +121,7 @@ async def scheduled_checkin(client, bots_cfg, hour, minute):
             await asyncio.sleep(20)
     except asyncio.CancelledError:
         pass
+
 
 
 # ================== 短任务统一出口 ==================
