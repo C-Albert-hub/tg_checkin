@@ -4,9 +4,9 @@
     "cmd": "/checkin",
     "desc": "XMR 矿池签到"
   },
-  "QingBaoJuZhuQuebot": {
+  "QingBaoJuXWsgkbot": {
     "type": "command",
     "cmd": "/sign",
-    "desc": "情报局朱雀签到"
+    "desc": "情报局玄武签到"
   }
 }
