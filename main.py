@@ -32,31 +32,6 @@ def load_bots_config(path=BOTS_FILE):
         raise ValueError("bots.json 内容为空或格式不正确")
     return bots
 
-# ================== 状态文件 ==================
-def load_state():
-    if not os.path.exists(STATE_FILE):
-        return {"last_sign_date": None, "fail_count": 0, "last_fail_time": None}
-    with open(STATE_FILE, "r", encoding="utf-8") as f:
-        return json.load(f)
-
-def save_state(state):
-    with open(STATE_FILE, "w", encoding="utf-8") as f:
-        json.dump(state, f, ensure_ascii=False, indent=2)
-
-def get_last_sign_date():
-    return load_state().get("last_sign_date")
-
-def update_sign_success():
-    now = datetime.now()
-    state = load_state()
-    state.update(
-        {
-            "last_sign_date": now.strftime("%Y-%m-%d"),
-            "last_sign_time": now.strftime("%H:%M:%S"),
-            "last_result": "success",
-        }
-    )
-    save_state(state)
 
 # ================== 菜单 ==================
 def show_menu():
@@ -138,56 +113,30 @@ async def send_checkin(client, bots_cfg):
         f"耗时 {(end_time - start_time).seconds}s\n"
     )
 
-    return success == len(results)
-
-def calc_next_sign_time(hour, minute):
-    now = datetime.now()
-    target = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
-
-    # 今天已过 → 明天
-    if now >= target:
-        target += timedelta(days=1)
-
-    return target
 
 async def scheduled_checkin(client, bots_cfg, hour, minute):
     print(f"[+] 定时签到已启动：{hour:02d}:{minute:02d}")
-    print("[INFO] 已启用低流量模式（非轮询）")
+    try:
+        while True:
+            now = datetime.now()
+            if now.hour == hour and now.minute == minute:
+                await send_checkin(client, bots_cfg)
+                print(f"[INFO] 定时签到完成，等待下一次触发...")
+                await asyncio.sleep(61)  # 防止重复触发
+            await asyncio.sleep(20)
+    except asyncio.CancelledError:
+        pass
 
+
+# ================== 短任务统一出口 ==================
+async def handle_short_task(func, name):
+    await func()
+    print(f"[DONE] {name}")
     while True:
-        state = load_state()
-        last_sign = state.get("last_sign_date")
-        today = datetime.now().strftime("%Y-%m-%d")
-
-        # 今天还没签，且已经过了目标时间 → 立即补签
-        now = datetime.now()
-        target_today = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
-
-        if last_sign != today and now >= target_today:
-            print(f"[INFO] 触发补签（{today}）")
-            ok = await send_checkin(client, bots_cfg)
-            if ok:
-                update_sign_success()
-                print("[STATE] 补签成功")
-            else:
-                print("[WARN] 补签失败，明天自动再试")
-
-        # 计算下一次签到时间
-        next_time = calc_next_sign_time(hour, minute)
-        sleep_seconds = (next_time - datetime.now()).total_seconds()
-
-        print(f"[INFO] 下次签到时间：{next_time}（sleep {int(sleep_seconds)}s）")
-
-        # 核心：一次性 sleep，到点再醒
-        await asyncio.sleep(sleep_seconds)
-
-        print(f"[INFO] 触发定时签到（{next_time.date()}）")
-        ok = await send_checkin(client, bots_cfg)
-        if ok:
-            update_sign_success()
-            print("[STATE] 定时签到成功")
-        else:
-            print("[WARN] 定时签到失败，将在下次周期重试")
+        choice = input("\n 输入 b 返回菜单，输入 q 退出: ").strip().lower()
+        if choice in ("b", "q"):
+            return choice
+        print("\n 请输入 b 或 q")
 
 
 # ================== 心跳保持 ==================
@@ -195,7 +144,6 @@ async def keep_alive(client):
     while True:
         await client.get_me()
         await asyncio.sleep(300)
-
 
 # ================== 主入口 ==================
 async def main():
