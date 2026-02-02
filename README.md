@@ -8,6 +8,7 @@ tg_checkin/
 ├── main.py 
 ├── tg_config.json // 配置api_hash和api_id
 |—— proxy.json //配置代理设置， enabled = false 默认关闭
+|—— state.json //保存上次记录的定时结果，未触发，则再次进行签到
 ```
 # 效果展示图
 <img width="858" height="534" alt="image" src="https://github.com/user-attachments/assets/25f25f76-16d3-4b5f-9b70-87625ad7396b" />
