@@ -1,0 +1,4 @@
+__pycache__/
+*.session
+*.session-journal
+tg_config.json
