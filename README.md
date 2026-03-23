@@ -13,14 +13,14 @@ tg_checkin/
 ├── scheduler.py         # 定时调度
 ├── menu.py              # CLI 交互菜单
 ├── bots.json            # 配置需要签到的机器人
-├── tg_config.json       # 配置 api_id 和 api_hash（不上传）
+├── tg_config.json       # 配置 api_id 和 api_hash
 ├── proxy.json           # 代理设置，enabled = false 默认关闭
-└── checkin.session      # Telethon 生成的 session 文件（不上传）
+└── checkin.session      # Telethon 生成的 session 文件
 ```
 
 # 配置说明
 
-**tg_config.json**（参考 `tg_config.example.json`）
+**tg_config.json**
 ```json
 {
   "api_id": 12345678,
